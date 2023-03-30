@@ -77,14 +77,14 @@ public class AppService {
         var group = groupRepo.findById(groupId).orElseThrow(() ->
                 new NoSuchElementException(String.format("нет группы с номером %d", groupId)));
         int size = group.getMembers().size();
-        if(size >= 3){
+        if(size < 3){
             throw new IllegalAccessException(String.format("В группе %d недостаточно участников для жеребьевки", groupId));
         }
         //TODO сделать настоящий рандом
         for(int i = 0; i < size; i++){
             group.getMembers().get(i).setRecipient(group.getMembers().get((i+1)%size));
         }
-        return group.getMembers().stream().map(ParentMemberInfoResponse::new).collect(Collectors.toList());
+        return groupRepo.save(group).getMembers().stream().map(ParentMemberInfoResponse::new).collect(Collectors.toList());
     }
 
     public ChildMemberInfoResponse getRecipient(Integer groupId, Integer memberId) throws IllegalAccessException {
@@ -92,6 +92,9 @@ public class AppService {
                 new NoSuchElementException(String.format("нет группы с номером %d", groupId)));
         var member = memberRepo.findById(memberId).orElseThrow(() ->
                 new NoSuchElementException(String.format("нет участника с номером %d", memberId)));
+        if(member.getGroup() == null || !member.getGroup().equals(group)){
+            throw new IllegalAccessException(String.format("Участник %d не состоит в группе %d", memberId, groupId));
+        }
         if(member.getRecipient() == null){
             throw new IllegalAccessException(String.format("У участника %d не назначен получатель подарка", memberId));
         }
